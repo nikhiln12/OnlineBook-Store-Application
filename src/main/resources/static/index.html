@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Bookstore</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 80%; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f4f4f4; }
+        button { margin: 0 5px; }
+        .actions { display: flex; justify-content: center; }
+        form { margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; }
+        .form-group input { width: 30%; padding: 8px; box-sizing: border-box; }
+        .form-group button { margin-top: 10px; }
+        .form-group button.cancel { margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Online Bookstore</h1>
+        <h2>Add a New Book</h2>
+        <form id="addBookForm">
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <input type="text" id="title" required>
+            </div>
+            <div class="form-group">
+                <label for="author">Author:</label>
+                <input type="text" id="author" required>
+            </div>
+            <div class="form-group">
+                <label for="price">Price:</label>
+                <input type="number" id="price" step="0.01" required>
+            </div>
+            <button type="submit">Add Book</button>
+        </form>
+
+        <h2>Book List</h2>
+        <table id="bookTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- Edit Form (Initially Hidden) -->
+        <div id="editForm" style="display:none; margin-top: 20px;">
+            <h2>Edit Book</h2>
+            <form id="updateBookForm">
+                <input type="hidden" id="editBookId">
+                <div class="form-group">
+                    <label for="editTitle">Title:</label>
+                    <input type="text" id="editTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="editAuthor">Author:</label>
+                    <input type="text" id="editAuthor" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPrice">Price:</label>
+                    <input type="number" id="editPrice" step="0.01" required>
+                </div>
+                <button type="submit">Update Book</button>
+                <button type="button" class="cancel" onclick="cancelEdit()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchBooks();
+
+            document.getElementById('addBookForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                addBook();
+            });
+
+            document.getElementById('updateBookForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                updateBook();
+            });
+        });
+
+        function fetchBooks() {
+            fetch('/api/books')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('bookTable').querySelector('tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(book => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${book.id}</td>
+                            <td>${book.title}</td>
+                            <td>${book.author}</td>
+                            <td>${book.price}</td>
+                            <td class="actions">
+                                <button onclick="showEditForm(${book.id}, '${book.title}', '${book.author}', ${book.price})">&#9998; Edit</button>
+                                <button onclick="deleteBook(${book.id})">&#128465; Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+
+        function addBook() {
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const price = document.getElementById('price').value;
+
+            fetch('/api/books', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title, author, price })
+            })
+            .then(response => response.json())
+            .then(() => {
+                fetchBooks();
+                document.getElementById('addBookForm').reset();
+            });
+        }
+
+        function deleteBook(id) {
+            fetch(`/api/books/${id}`, {
+                method: 'DELETE'
+            })
+            .then(() => {
+                fetchBooks();
+            });
+        }
+
+        function showEditForm(id, title, author, price) {
+            document.getElementById('editBookId').value = id;
+            document.getElementById('editTitle').value = title;
+            document.getElementById('editAuthor').value = author;
+            document.getElementById('editPrice').value = price;
+
+            document.getElementById('editForm').style.display = 'block';
+            window.scrollTo(0, document.body.scrollHeight); // Scroll to the form
+        }
+
+        function updateBook() {
+            const id = document.getElementById('editBookId').value;
+            const title = document.getElementById('editTitle').value;
+            const author = document.getElementById('editAuthor').value;
+            const price = document.getElementById('editPrice').value;
+
+            fetch(`/api/books/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title, author, price })
+            })
+            .then(response => response.json())
+            .then(() => {
+                fetchBooks();
+                document.getElementById('editForm').style.display = 'none';
+            });
+        }
+
+        function cancelEdit() {
+            document.getElementById('editForm').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
